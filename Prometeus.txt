@@ -1,0 +1,130 @@
+Sub Prometheus_666()
+    'Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+    Dim t As Single
+    Dim s As Currency
+    Dim Month As Integer
+    Dim Wayofpay As String
+    Dim tabel_number() As String
+    Dim Num_shop As String
+    Dim sum_array() As Long
+    Dim s271 As Currency
+    Dim Columns As Integer
+    Dim Rows1 As Integer
+    Dim Rows2 As Integer
+    Dim l As Integer
+    Dim rar As Currency
+    Dim startRow As Currency
+    Dim lastRow As Currency
+    Dim endrow_tabel As Currency
+    rar = 3
+    Month = Application.InputBox("Введите месяц")  'Стартовая ячейка с названием
+    Set pm = Workbooks("zp_tab12.DBF").Sheets(1)
+    Set pp = Workbooks("Вариант_рабочий_2.xlsm").Sheets(2)
+    Set pt = Workbooks("TAB_" & Month & "_2024.xlsx").Sheets(1)
+    endrow_tabel = pt.Cells(pm.Rows.Count, 1).End(xlUp).Row
+    lastRow = pm.Cells(pm.Rows.Count, 1).End(xlUp).Row
+    ReDim sum_array(1 To 17) As Long
+    t = Timer
+    Columns = 17 'задаю столбцы
+    Rows1 = 10 'задаю строки
+    Rows2 = 6
+    startRow = pm.Range("C2:C" & lastRow).Find(Month).Row
+    'Блок заполнения первой части таблицы-----------------------------------------------------------------------------------------------------------------
+    For iii = 1 To Columns 'Столбцы
+        Wayofpay = pp.Cells(3, iii + 1).Value
+        
+        For ii = 1 To Rows1 'Строки
+        
+            s = 0
+            s271 = 0
+            
+            Num_shop = pp.Cells(ii + 3, 1)
+            
+            For i = startRow To lastRow
+                If pm.Cells(i, 5) = Wayofpay And pm.Cells(i, 3) = Month And pm.Cells(i, 2) = 271 Then
+                    s271 = s271 + pm.Cells(i, 12)
+                End If
+                If pm.Cells(i, 5) = Wayofpay And pm.Cells(i, 3) = Month And pm.Cells(i, 2) = Num_shop Then
+                    tabel_number = Split(pm.Cells(i, 1), "/")
+                    If pt.Range("D2:D" & endrow_tabel).Find(Trim(tabel_number(3))) Is Nothing Then
+                        tabel_none = tabel_none + tabel_number(3)
+                    Else:
+                        s = s + pm.Cells(i, 12)
+                        If (pt.Cells(pt.Range("D2:D" & endrow_tabel).Find(Trim(tabel_number(3))).Row, 8) = 11 Or pt.Cells(pt.Range("D2:D" & endrow_tabel).Find(Trim(tabel_number(3))).Row, 8) = 12) And pt.Cells(pt.Range("D2:D" & endrow_tabel).Find(Trim(tabel_number(3))).Row, 1) <> 307 And pt.Cells(pt.Range("D2:D" & endrow_tabel).Find(Trim(tabel_number(3))).Row, 1) = 666 Then
+                            sum_array(iii) = sum_array(iii) + pm.Cells(i, 12)
+                        End If
+                    End If
+                End If
+                
+            Next i
+            
+            If pp.Cells(ii + 3, 1) = 272 Then
+                
+                If (s + s271) = 0 Then
+                    pp.Cells(ii + 3, iii + 1) = Empty
+                Else
+                    pp.Cells(ii + 3, iii + 1) = s + s271
+                End If
+            Else
+                If s = 0 Then
+                    pp.Cells(ii + 3, iii + 1) = Empty
+                Else
+                    pp.Cells(ii + 3, iii + 1) = s
+                End If
+            End If
+            s271 = 0
+        Next ii
+        
+    Next iii
+    'Блок заполнения второй части таблицы-----------------------------------------------------------------------------------------------------------------
+    For iii = 1 To Columns 'Столбцы
+    
+        Wayofpay = pp.Cells(3, iii + 1).Value
+        
+        For ii = 1 To Rows2 'Строки
+        
+            s = 0
+            s271 = 0
+            Num_shop = pp.Cells(ii + 43, 1)
+            
+            For i = startRow To lastRow
+                If pm.Cells(i, 5) = Wayofpay And pm.Cells(i, 3) = Month And pm.Cells(i, 2) = Num_shop Then
+                    tabel_number = Split(pm.Cells(i, 1), "/")
+                    If pt.Range("D2:D" & endrow_tabel).Find(Trim(tabel_number(3))) Is Nothing Then
+                        tabel_none = tabel_none + tabel_number(3)
+                    Else:
+                        s = s + pm.Cells(i, 12)
+                        If (pt.Cells(pt.Range("D2:D" & endrow_tabel).Find(Trim(tabel_number(3))).Row, 8) = 11 Or pt.Cells(pt.Range("D2:D" & endrow_tabel).Find(Trim(tabel_number(3))).Row, 8) = 12) And pt.Cells(pt.Range("D2:D" & endrow_tabel).Find(Trim(tabel_number(3))).Row, 1) <> 307 And pt.Cells(pt.Range("D2:D" & endrow_tabel).Find(Trim(tabel_number(3))).Row, 1) = 666 Then
+                            sum_array(iii) = sum_array(iii) + pm.Cells(i, 12)
+                        End If
+                    End If
+                End If
+                
+            Next i
+            
+            If pp.Cells(ii + 3, 1) = 272 Then
+                pp.Cells(ii + 3, iii + 1) = s + s271
+            Else
+                If s = 0 Then
+                    pp.Cells(ii + 43, iii + 1) = Empty
+                Else
+                    pp.Cells(ii + 43, iii + 1) = s
+                End If
+            End If
+            
+            
+            
+        Next ii
+        
+    Next iii
+    'Блок заполнения Третьей части таблицы-----------------------------------------------------------------------------------------------------------------
+    For iii = 1 To Columns 'Столбцы
+        pp.Cells(60, iii + 1) = sum_array(iii)
+    Next iii
+    t = Timer - t
+    MsgBox t, 1, "Время выполнения кода"
+    'Application.ScreenUpdating = True
+    Application.Calculation = xlCalculationAutomatic
+    MsgBox tabel_none 'Вывести табельные номера, которых не нашлось
+End Sub

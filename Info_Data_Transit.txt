@@ -1,0 +1,320 @@
+Sub Info()
+    'Инициализация переменных
+    Application.ScreenUpdating = False
+    Dim current_row As Integer
+    Dim mans() As Currency
+    Dim Sum() As Currency
+    Dim Time_arr() As Integer
+    Dim names() As String
+    ReDim mans(0) As Currency
+    ReDim names(0) As String
+    Set Db = Workbooks("zp.xlsx").Sheets(1)
+    Set wb = Workbooks("Artemida_2023.xlsm").ActiveSheet
+    Set Tb = Workbooks("Tab_2023.xlsx").Sheets(1)
+    lastRow = Db.Cells(Db.Rows.count, 1).End(xlUp).Row
+    value = 0
+    
+    'Ввод значений с возможностью отмены и автоматическим указанием общего количества
+    current_row = Application.InputBox("Введите номер стартовой строки")
+    If current_row = 0 Then
+        Exit Sub
+    Else
+        choise = Application.InputBox("Сколько блоков сделать?", , ((wb.Cells(wb.Rows.count, 1).End(xlUp).Row) + 1 - current_row + 1) / 8)
+        If choise = 0 Then
+            Exit Sub
+        End If
+    End If
+
+    'Загружаю массив нужных табельных номеров с таблиц
+    For i = 1 To CInt(choise)
+        mans(i - 1) = wb.Cells((i * 8) - 8 + current_row, 3).value
+        If i < CInt(choise) Then
+            ReDim Preserve mans(UBound(mans) + 1)
+        End If
+    Next i
+    
+    'Поиск и запись нужных элементов
+    ReDim Sum(1 To CInt(choise), 1 To 12) As Currency
+    ReDim Time_arr(1 To CInt(choise), 1 To 12) As Integer
+    For i = 2 To lastRow
+        value = ManInTab(CCur(Trim(Split(Db.Cells(i, 1).value, "/")(3))), mans)
+        If value <> 0 Then
+            If (Db.Cells(i, 5).value = "Повременно" Or Db.Cells(i, 5).value = 40 Or Db.Cells(i, 5).value = 33 Or Db.Cells(i, 5).value = 30) Then
+                Sum(value, Db.Cells(i, 3)) = Sum(value, Db.Cells(i, 3)) + Db.Cells(i, 12).value
+            End If
+            If Db.Cells(i, 5).value = "Повременно" Then
+                Time_arr(value, Db.Cells(i, 3)) = Db.Cells(i, 6).value
+            End If
+        End If
+    Next i
+    
+    'Заполнение массива имён по табельному номеру
+    ReDim names(1 To CInt(choise))
+    For i = 2 To Tb.Cells(Tb.Rows.count, 1).End(xlUp).Row
+        value = ManInTab(Tb.Cells(i, 4).value, mans)
+        If value <> 0 Then
+            If names(value) <> Tb.Cells(i, 6).value Then
+                names(value) = Tb.Cells(i, 6).value
+            End If
+        End If
+    Next i
+    
+    'Запись информации на лист
+    For i = 1 To CInt(choise)
+        wb.Cells((i * 8) - 8 + current_row, 2) = names(i)
+        For col = 2 To 13
+            wb.Cells((i * 8) - 8 + current_row + 1, col) = Sum(i, col - 1) 'Деньги
+            wb.Cells((i * 8) - 8 + current_row + 2, col) = Time_arr(i, col - 1) 'Время
+            If Time_arr(i, col - 1) = 0 Then
+                wb.Cells((i * 8) - 8 + current_row + 3, col) = 0
+            Else:
+                wb.Cells((i * 8) - 8 + current_row + 3, col) = Round(Sum(i, col - 1) / Time_arr(i, col - 1), 2) 'Ставка в час
+            End If
+        Next col
+    Next i
+    
+    'Конец. Включаю обновление экрана
+    Application.ScreenUpdating = True
+End Sub
+'Функция вида: (что найти, где найти)
+Function ManInTab(tabel As Currency, mans() As Currency) As Integer
+    For i = 0 To UBound(mans)
+        If mans(i) = tabel Then
+            ManInTab = i + 1
+            Exit For
+        Else
+            ManInTab = 0
+        End If
+    Next i
+End Function
+------------------------------------------------------------------------------------------------------------------------------
+Sub Data()
+    'Инициализация
+    Application.ScreenUpdating = False
+    Dim ws As Worksheet
+    Set ws = ActiveWorkbook.ActiveSheet
+    Dim choise As Currency
+    Dim current_row As Integer
+    current_row = Application.InputBox("С какой строки начать?")
+    blocks = (ws.Cells(ws.Rows.count, 1).End(xlUp).Row + 2 - current_row) / 8
+    MsgBox blocks, vbOKOnly, "Количество блоков от стартовой строки"
+    choise = Application.InputBox("Сколько блоков сделать?")
+    For makes = 1 To choise
+        Dim N As Integer
+        Dim X As Double
+        Dim TotalSum As Double
+        Dim i As Integer
+        Dim remainingN As Integer
+        Dim meanN As Double
+        Dim meanFactor As Double
+        Dim randomFactor As Double
+        Dim randomIndex As Integer
+        Dim add_col As Integer
+        Dim Enabled As Integer
+        Dim M As Integer
+        Dim list_ex() As Integer
+        ReDim list_ex(0) As Integer
+        Enabled = 0
+        add_col = 1
+        current_row = current_row + 2
+        
+        'Задает общее количество денег и штук
+        things = ws.Cells(current_row + 4, 17).value 'Штуки
+        money = ws.Cells(current_row + 4, 18).value 'Деньги
+        
+        ' Установка значений штук(N) и суммы-ориентира(X)
+        If Not ws.Cells(current_row + 1, 17) = Empty And Not ws.Cells(current_row + 1, 18) = Empty And Not ws.Cells(current_row + 4, 17) = Empty And Not ws.Cells(current_row + 4, 18) = Empty Then
+            MsgBox "У вас всё заполнено! Решитесь, что хотите сделать."
+            Exit Sub
+        Else
+            If ws.Cells(current_row + 1, 17) = Empty And ws.Cells(current_row + 1, 18) = Empty Then
+                If ws.Cells(current_row + 4, 18) = Empty Or ws.Cells(current_row + 4, 17) = Empty Then
+                    MsgBox "Вы не ввели данные!"
+                    Exit Sub
+                Else
+                    X = ws.Cells(current_row - 1, 14) * ws.Cells(current_row + 1, 16).value
+                    N = Int((X / money) * things)
+                End If
+            Else
+                If ws.Cells(current_row + 1, 17) = Empty Or ws.Cells(current_row + 1, 18) = Empty Then
+                    MsgBox "Нет денег, но вы держитесь!"
+                    Exit Sub
+                Else
+                    N = ws.Cells(current_row + 1, 17).value
+                    X = ws.Cells(current_row + 1, 18).value
+                End If
+            End If
+        End If
+        
+        'Подсчёт количества отработаных месяцев
+        M = 0
+        For i = 1 To 12
+            If ws.Cells(current_row + 1, i + add_col).value <> 0 Then
+                M = Int(M + 1)
+            End If
+        Next i
+        
+        ' Среднее значение для распределения во второй строке
+        meanN = Round(N / M, 2)
+        
+        'Создаю список колонок(list_ex), где есть ненулевые значения ставки
+        For i = 1 To 12
+            If ws.Cells(current_row + 1, i + add_col).value <> 0 Then
+                list_ex(UBound(list_ex)) = i + add_col
+                If (i < 12) And ((ws.Cells(current_row + 1, i + add_col + 1).value <> 0) Or (ws.Cells(current_row + 1, i + add_col + 1).value <> Empty)) Then
+                    ReDim Preserve list_ex(UBound(list_ex) + 1)
+                End If
+            End If
+        Next i
+        
+        ' Распределение по ячейкам с отклонением в пределах 40% (±20%) для ячеек
+        If (N / M) > 1.3 Then
+            sumGenerated = 0
+            For i = 1 To 12
+                If ws.Cells(current_row + 1, i + add_col).value <> 0 Then
+                    Enabled = Enabled + 1
+                    'ws.Cells(2, i) = Int(N / 12)
+                    randomFactor = 0.8 + Rnd() * 0.4 ' Отклонение в пределах 40%
+                    ws.Cells(2 + current_row, i + add_col).value = Int(meanN * randomFactor)
+                    sumGenerated = sumGenerated + ws.Cells(2 + current_row, i + add_col).value
+                End If
+            Next i
+            remainingN = N - sumGenerated
+            For i = LBound(list_ex) To UBound(list_ex)
+                If remainingN > 0 Then
+                    randomIndex = Int((UBound(list_ex) + 1) * Rnd() + LBound(list_ex))
+                    ws.Cells(2 + current_row, list_ex(randomIndex)).value = Int(ws.Cells(2 + current_row, list_ex(randomIndex)).value) + 1
+                    remainingN = remainingN - 1
+                End If
+            Next i
+            randomIndex = Int((UBound(list_ex) + 1) * Rnd() + LBound(list_ex))
+            ws.Cells(2 + current_row, list_ex(randomIndex)).value = Int(ws.Cells(2 + current_row, list_ex(randomIndex)).value) + remainingN
+        Else
+            remainingN = N
+            sumGenerated = 0
+            For i = LBound(list_ex) To UBound(list_ex)
+                If remainingN > 0 Then
+                    ws.Cells(current_row + 2, list_ex(i)) = 1
+                    remainingN = remainingN - 1
+                Else
+                    Exit For
+                End If
+            Next i
+            If remainingN > 0 Then
+                randomIndex = Int((UBound(list_ex) + 1) * Rnd() + LBound(list_ex))
+                ws.Cells(2 + current_row, list_ex(randomIndex)).value = Int(ws.Cells(2 + current_row, list_ex(randomIndex)).value) + remainingN
+            End If
+        End If
+        
+        ' Сумма по штукам
+        sumGenerated = 0
+            For i = 1 To 12
+                If ws.Cells(current_row + 1, i + add_col).value <> 0 Then
+                    sumGenerated = sumGenerated + ws.Cells(2 + current_row, i + add_col).value
+                End If
+            Next i
+        remainingN = N - sumGenerated
+        
+        ' Вставка значения времени
+        For i = 1 To 12
+            If ws.Cells(current_row + 1, i + add_col).value <> 0 And ws.Cells(current_row + 2, i + add_col).value <> 0 Then
+                a = ws.Cells(current_row - 1, i + add_col)
+                b = X / ws.Cells(current_row - 1, 14)
+                c = ws.Cells(current_row + 2, i + add_col)
+                d = ws.Cells(current_row + 1, i + add_col)
+                ws.Cells(current_row + 3, i + add_col) = (a * b) / (c * d)
+            End If
+        Next i
+        
+        ' Вычисление и запись конечной суммы
+        TotalSum = 0
+        For i = LBound(list_ex) To UBound(list_ex)
+            If (ws.Cells(1 + current_row, list_ex(i)).value * ws.Cells(2 + current_row, list_ex(i)).value * ws.Cells(3 + current_row, list_ex(i)).value) <> 0 Then
+                ws.Cells(4 + current_row, list_ex(i)).value = ws.Cells(1 + current_row, list_ex(i)).value * ws.Cells(2 + current_row, list_ex(i)).value * ws.Cells(3 + current_row, list_ex(i)).value
+            End If
+        Next i
+        current_row = current_row + 6
+    Next makes
+    Application.ScreenUpdating = True
+End Sub
+--------------------------------------------------------------------------------------------------------------------------------
+Sub Transit()
+    'Инициализация
+    Application.ScreenUpdating = False
+    Dim Months As Variant
+    Dim Passed() As String
+    ReDim Passed(0) As String
+    Set Wfb = Workbooks("Artemida_2023.xlsm")
+    Set wb = Wfb.ActiveSheet
+    Set Wbc = Wfb.Sheets(1)
+    Months = Array("Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь")
+    counter = 0
+    countOfMonths = 0
+    cell = 1
+    ListIndex = 0
+    cell_tstart = lastRow + 2
+    lastRowMain = wb.Cells(wb.Rows.count, 1).End(xlUp).Row
+    
+    'Перемещение значений из таблицы в шаблон
+    For i = 1 To (lastRowMain + 1) / 8
+        
+        Name = wb.Cells((i * 8) - 7, 2).value
+        If Not checkArray(Passed, Name) = True Then
+
+            Passed(UBound(Passed)) = Name
+            ReDim Preserve Passed(UBound(Passed) + 1)
+            For Each Mon In Months
+                NumOfMonth = indexArr(Months, Mon)
+                lastRow = Wfb.Sheets((wb.Index) + 1).Cells(Wfb.Sheets((wb.Index) + 1).Rows.count, 2).End(xlUp).Row
+                If Not IsEmpty(wb.Cells((i * 8) - 3, NumOfMonth + 1)) Then
+                    Wbc.Range("B2:K11").Copy Destination:=Wfb.Sheets((wb.Index) + 1).Cells(lastRow + 2, 2)
+                    Wfb.Sheets((wb.Index) + 1).Cells(lastRow + 2, 10) = Mon 'Месяц
+                    Wfb.Sheets((wb.Index) + 1).Cells(lastRow + 4, 2) = "Ф.И.О.: " & Name 'ФИО
+                    Wfb.Sheets((wb.Index) + 1).Cells(lastRow + 8, 2) = wb.Cells((i * 8) - 7, 18) 'Описание
+                    Wfb.Sheets((wb.Index) + 1).Cells(lastRow + 8, 4) = Round(wb.Cells((i * 8) - 2, NumOfMonth + 1), 2) 'Время
+                    Wfb.Sheets((wb.Index) + 1).Cells(lastRow + 8, 5) = wb.Cells((i * 8) - 3, NumOfMonth + 1) 'Количество
+                    Wfb.Sheets((wb.Index) + 1).Cells(lastRow + 8, 9) = wb.Cells((i * 8) - 1, NumOfMonth + 1) 'Сумма
+                    Wfb.Sheets((wb.Index) + 1).Cells(lastRow + 8, 3) = wb.Cells((i * 8) - 7, 1) 'Наименование
+                    countOfMonths = countOfMonths + 1
+                End If
+            Next
+
+        Else
+            lastRow = Wfb.Sheets((wb.Index) + 1).Cells(Wfb.Sheets((wb.Index) + 1).Rows.count, 2).End(xlUp).Row
+            For Each Mon In Months
+                NumOfMonth = indexArr(Months, Mon)
+                If Not IsEmpty(wb.Cells((i * 8) - 3, NumOfMonth + 1)) Then
+                    Wfb.Sheets((wb.Index) + 1).Cells((lastRow + 9) - (countOfMonths * 11) + 11 * counter, 2) = wb.Cells((i * 8) - 7, 18) 'Описание
+                    Wfb.Sheets((wb.Index) + 1).Cells((lastRow + 9) - (countOfMonths * 11) + 11 * counter, 4) = Round(wb.Cells((i * 8) - 2, NumOfMonth + 1), 2) 'Время
+                    Wfb.Sheets((wb.Index) + 1).Cells((lastRow + 9) - (countOfMonths * 11) + 11 * counter, 5) = wb.Cells((i * 8) - 3, NumOfMonth + 1) 'Количество
+                    Wfb.Sheets((wb.Index) + 1).Cells((lastRow + 9) - (countOfMonths * 11) + 11 * counter, 9) = wb.Cells((i * 8) - 1, NumOfMonth + 1) 'Сумма
+                    Wfb.Sheets((wb.Index) + 1).Cells((lastRow + 9) - (countOfMonths * 11) + 11 * counter, 3) = wb.Cells((i * 8) - 7, 1) 'Наименование
+                    counter = counter + 1
+                End If
+            Next
+
+            countOfMonths = 0
+            counter = 0
+        End If
+        
+    Next i
+End Sub
+'Функция показывает: есть ли в массиве элемент или нет
+Function checkArray(arr, value) As Boolean
+    checkArray = False
+    For Each element In arr
+        If element = value Then
+            checkArray = True
+            Exit For
+        End If
+    Next
+End Function
+'Функция поиска на соответствие в массиве
+Function indexArr(arr, value) As Integer
+    For i = LBound(arr) To UBound(arr)
+        If arr(i) = value Then
+            indexArr = i + 1
+            Exit For
+        End If
+    Next i
+End Function
